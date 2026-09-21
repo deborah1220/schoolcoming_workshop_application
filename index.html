@@ -343,7 +343,7 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
   var DMAP={}; DRINKS.forEach(function(d){DMAP[d.k]=d.t;});
   var ROSTER = ["이향재","이성용","김복례","권선희","최재연","오상윤","송혜진","권희자","정미란","황유진","우소영","지호영","백경민","김혜진","장혜수","박선영","맹아론","임태식","서찬원","강계완","구소희","김미학","김성환","김진실","김현화","김혜정","맹정은","박금주","성이슬","박정주","사재은","송미영","송민우","안은아","양정석","오주석","왕경희","원희수","윤여민","윤지원","이경아","이영숙","이예지","이현숙","임예옥","임주희","장유정","전형민","정회진","조효진","최명숙","전병화","최은진","최현희","한선숙","한현근","황윤현","고영근","박혜영","강민주","이은영","오종해","이지혜","이민옥","권월향","박미영","배미애","임지윤"];
   var TOTAL=5;
-  var st={step:1,name:"",phone:"",a:null,b:null,drink:null,done:false,warn:"",sending:false};
+  var st={step:1,name:"",phone:"",a:null,b:null,drink:null,done:false,warn:"",sending:false,checking:false,existing:false,closed:false,closedMsg:""};
   var flow=document.getElementById("flow"), pips=document.getElementById("pips");
 
   function esc(v){return String(v).replace(/[&<>"]/g,function(c){
@@ -367,6 +367,15 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
 
   function render(){
     var h="", s=st.step;
+    if(st.closed){
+      flow.innerHTML='<section class="step finish closed">'+
+        '<svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true"><rect x="7" y="7" width="34" height="34" rx="11" fill="var(--berry)"/>'+
+        '<rect x="17" y="22" width="14" height="11" rx="2.5" fill="#fff"/><path d="M19.5 22v-3.5a4.5 4.5 0 0 1 9 0V22" fill="none" stroke="#fff" stroke-width="3"/></svg>'+
+        '<h3>신청이 마감되었어요</h3><p>'+esc(st.closedMsg||"변경이 필요하시면 담당 선생님께 말씀해 주세요.")+'</p></section>';
+      pips.innerHTML="";
+      if(window.__fitRight) window.__fitRight();
+      return;
+    }
 
     if(s>1){ h+=doneRow(esc(st.name)+" 선생님 · 뒷자리 "+esc(st.phone),1); }
     else{
@@ -375,7 +384,7 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
         '<div class="row2"><div class="field"><label for="nm">이름</label><input id="nm" type="text" autocomplete="off" placeholder="예) 김" value="'+esc(st.name)+'"></div>'+
         '<div class="field"><label for="ph">휴대전화 뒷 4자리</label><input id="ph" type="tel" inputmode="numeric" maxlength="4" placeholder="예) 1234" value="'+esc(st.phone)+'"></div></div>'+
         '<div class="sugs" id="sugs"></div>'+
-        '<button type="button" class="next" id="n1" disabled>다음으로</button></section>';
+        '<button type="button" class="next" id="n1" disabled>'+(st.checking?"확인 중…":"다음으로")+'</button></section>';
     }
 
     if(s>2){ h+=doneRow("10월 7일 · "+nameOf(st.a),2); }
@@ -422,9 +431,11 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
         '<svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">'+
         '<rect x="7" y="7" width="34" height="34" rx="11" fill="var(--mint)"/>'+
         '<path d="M16 24.5l6 6 11-13" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
-        '<h3>신청이 접수됐어요</h3><p>'+esc(st.name)+' 선생님, 고맙습니다.<br>이후 연수 간식은 추후 다시 조사하겠습니다.</p></section>';
+        '<h3>'+(st.existing?"수정이 저장됐어요":"신청이 접수됐어요")+'</h3><p>'+esc(st.name)+' 선생님, 고맙습니다.<br>이후 연수 간식은 추후 다시 조사하겠습니다.</p></section>';
     }else if(s===5){
-      h+=coach("다 골라 주셨어요. 맞는지만 확인하고 제출해 주세요.");
+      h+=coach(st.existing
+        ? "이미 신청하신 내용이에요. 바꿀 부분만 <b>고치기</b>를 눌러 다시 고르고 저장해 주세요."
+        : "다 골라 주셨어요. 맞는지만 확인하고 제출해 주세요.");
       var picks=[];
       if(st.a&&st.a!=="none") picks.push(COURSES[st.a]);
       if(st.b==="4") picks.push(COURSES["4"]);
@@ -435,7 +446,7 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
         '<div><b>9.28 음료</b><span>'+(DMAP[st.drink]||"미정")+'</span></div>'+
         '<div><b>필수</b><span>9.28 · 11.23 전체회의 (전 교직원)</span></div></div>'+
         '<p class="later">이후 연수 간식은 추후 다시 조사하겠습니다.</p>'+
-        '<button type="button" class="next" data-submit="1">이대로 신청하기</button></section>';
+        '<button type="button" class="next" data-submit="1">'+(st.existing?"수정 내용 저장하기":"이대로 신청하기")+'</button></section>';
     }else{
       h+='<section class="step locked"><h3>이대로 신청할까요?</h3>'+hint(5)+'</section>';
     }
@@ -485,6 +496,25 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
     nm.addEventListener("input",check); ph.addEventListener("input",check); check();
   }
 
+  function api(params){
+    var q=Object.keys(params).map(function(k){return k+"="+encodeURIComponent(params[k]);}).join("&");
+    return fetch(SHEET_URL+(SHEET_URL.indexOf("?")<0?"?":"&")+q).then(function(r){return r.json();});
+  }
+  function keyOfCourse(name){
+    if(!name) return null; if(name==="미신청") return "none";
+    for(var k in COURSES){ if(COURSES[k].t===name && k!=="4") return k; }
+    return null;
+  }
+  function keyOfDrink(name){
+    for(var i=0;i<DRINKS.length;i++){ if(DRINKS[i].t===name) return DRINKS[i].k; }
+    return null;
+  }
+  if(SHEET_URL){
+    api({action:"status"}).then(function(r){
+      if(r&&r.closed){ st.closed=true; st.closedMsg=r.message||""; render(); }
+    }).catch(function(){});
+  }
+
   flow.addEventListener("click",function(e){
     var t=e.target;
     var pick=t.closest?t.closest("[data-pick]"):null;
@@ -500,7 +530,31 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
       return;
     }
 
-    if(nx){ if(nx.disabled) return; st.step=1; advance(); render(); scrollActive(); return; }
+    if(nx){
+      if(nx.disabled||st.checking) return;
+      if(!SHEET_URL){ st.step=1; advance(); render(); scrollActive(); return; }
+      st.checking=true; st.warn=""; render();
+      api({action:"lookup",name:st.name,phone:st.phone}).then(function(r){
+        st.checking=false;
+        if(r.closed){ st.closed=true; st.closedMsg=r.message||""; render(); return; }
+        if(r.found && r.match===false){
+          st.warn="처음 신청하실 때 적은 휴대전화 뒷자리와 달라요. 다시 확인해 주세요.";
+          render(); return;
+        }
+        if(r.found && r.data){
+          st.existing=true;
+          st.a=keyOfCourse(r.data.oct7); st.b=(r.data.nov10==="신청")?"4":(r.data.nov10?"none":null);
+          st.drink=keyOfDrink(r.data.drink928);
+          st.step=2; advance();
+        }else{
+          st.existing=false; st.step=2; advance();
+        }
+        render(); scrollActive();
+      }).catch(function(){
+        st.checking=false; st.existing=false; st.step=2; advance(); render(); scrollActive();
+      });
+      return;
+    }
     if(pick){
       var v=pick.getAttribute("data-pick");
       if(st.step===2){ st.a=v; st.warn=""; }
@@ -536,13 +590,21 @@ var ROUND = "1차 · 강좌 신청 + 9.28 음료";
         nov10:(st.b==="4")?"신청":"미신청",
         drink928:DMAP[st.drink]||""
       };
-      fetch(SHEET_URL,{method:"POST",mode:"no-cors",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
-      .then(function(){ st.sending=false; st.done=true; render(); scrollActive(); })
-      .catch(function(){
+      var body=JSON.stringify(payload);
+      fetch(SHEET_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:body})
+      .then(function(res){ return res.json(); })
+      .then(function(r){
         st.sending=false;
-        st.warn="전송이 안 됐어요. 인터넷 연결을 확인하고 다시 눌러 주세요.";
-        render(); scrollActive();
+        if(r&&r.ok){ st.done=true; render(); scrollActive(); return; }
+        if(r&&r.error==="closed"){ st.closed=true; st.closedMsg=r.message||""; render(); return; }
+        if(r&&r.error==="phone"){ st.warn="처음 신청하실 때 적은 휴대전화 뒷자리와 달라요."; st.step=1; render(); scrollActive(); return; }
+        st.warn="저장이 안 됐어요. 잠시 뒤 다시 눌러 주세요."; render(); scrollActive();
+      })
+      .catch(function(){
+        // 응답을 못 읽는 환경이면 한 번 더 보내고 완료로 처리 (같은 이름은 덮어쓰기라 중복 걱정 없음)
+        fetch(SHEET_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:body})
+        .then(function(){ st.sending=false; st.done=true; render(); scrollActive(); })
+        .catch(function(){ st.sending=false; st.warn="전송이 안 됐어요. 인터넷 연결을 확인하고 다시 눌러 주세요."; render(); scrollActive(); });
       });
       return;
     }
